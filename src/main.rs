@@ -1,14 +1,8 @@
-/* We compared the speed difference between murmur3 and ahash for a string of
-    length 10, and the results show that ahash has a clear advantage.
-    Average time to DefaultHash a string of length 10: 33.6364 nanoseconds
-    Average time to ahash a string of length 10: 19.0412 nanoseconds
-    Average time to murmur3 a string of length 10: 33.0394 nanoseconds
-    Warning: Do not use this hash in non-memory scenarios,
-    One of the reasons is as follows:
-    https://github.com/tkaitchuck/aHash/blob/master/README.md#goals-and-non-goals
-*/
+pub use ahash::AHasher;
 use byteorder::{ByteOrder, LittleEndian};
 use murmur3::murmur3_x64_128;
+use rand::Rng;
+use seahash::SeaHasher;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
@@ -33,10 +27,6 @@ impl Hasher for MurmurHasher {
     }
 }
 
-pub use ahash::AHasher;
-use rand::Rng;
-use seahash::SeaHasher;
-
 fn generate_random_string(length: usize) -> String {
     let mut rng = rand::thread_rng();
     let chars: Vec<char> = (0..length)
@@ -46,7 +36,9 @@ fn generate_random_string(length: usize) -> String {
     chars.iter().collect()
 }
 
-const LOOP_NUM: usize = 10000;
+const KEY_NUM: usize = 100000;
+const KEY_LEN: usize = 100;
+const BUCKET_LEN: usize = 128;
 
 fn test_hash_speed<F>(hash_function: F, keys: &[String]) -> Duration
 where
@@ -64,34 +56,32 @@ fn test_hash_dist<F>(hash_function: F, keys: &[String]) -> f64
 where
     F: Fn(&str) -> u64,
 {
-    let cap = 16;
-    let mut buckets = vec![0; cap];
+    let mut buckets = vec![0; BUCKET_LEN];
     for key in keys {
-        let idx = hash_function(&key) as usize % cap;
+        let idx = hash_function(&key) as usize % BUCKET_LEN;
         buckets[idx] += 1;
     }
 
-    let mean: usize = buckets.iter().sum::<usize>() / cap;
+    let mean = buckets.iter().sum::<usize>() as f64 / BUCKET_LEN as f64;
     let variance = buckets
         .iter()
         .map(|n| {
-            let diff = n - mean;
+            let diff = *n as f64 - mean;
             diff * diff
         })
-        .sum::<usize>() as f64
-        / cap as f64;
+        .sum::<f64>()
+        / BUCKET_LEN as f64;
 
     // std_dev
     variance.sqrt()
 }
 
 fn main() {
-    let key_len = 100;
-    let keys: Vec<_> = (0..LOOP_NUM)
-        .map(|_| generate_random_string(key_len))
+    let keys: Vec<_> = (0..KEY_NUM)
+        .map(|_| generate_random_string(KEY_LEN))
         .collect();
 
-    println!("key num is {}, len of each key:{}", keys.len(), key_len);
+    println!("key num is {}, len of each key:{}", KEY_NUM, KEY_LEN);
 
     let a_hash = |x: &str| -> u64 {
         let mut hasher = AHasher::default();
@@ -115,22 +105,25 @@ fn main() {
         x.hash(&mut hasher);
         hasher.finish()
     };
+    let murmur_hash2 = |x: &str| -> u64 { hash64(x.as_bytes()) };
 
-    println!("build_cost:(ns)");
+    println!("----Build_cost(ns)------");
     println!(
-        "default:{}, ahash:{}, murmur:{}, seahash:{}, seahash2:{}",
+        "default:{}, ahash:{}, murmur:{}, murmur2:{}, seahash:{}, seahash2:{}",
         test_hash_speed(defalut_hash, &keys).as_nanos(),
         test_hash_speed(a_hash, &keys).as_nanos(),
         test_hash_speed(murmur_hash, &keys).as_nanos(),
+        test_hash_speed(murmur_hash2, &keys).as_nanos(),
         test_hash_speed(sea_hash, &keys).as_nanos(),
         test_hash_speed(sea_hash2, &keys).as_nanos(),
     );
-    println!("std_dev");
+    println!("----Std_dev------");
     println!(
-        "default:{:.3}, ahash:{:.3}, murmur:{:.3}, seahash:{:.3}, seahash2:{:.3}",
+        "default:{:.3}, ahash:{:.3}, murmur:{:.3}, murmur2:{:.3}, seahash:{:.3}, seahash2:{:.3}",
         test_hash_dist(defalut_hash, &keys),
         test_hash_dist(a_hash, &keys),
         test_hash_dist(murmur_hash, &keys),
+        test_hash_dist(murmur_hash2, &keys),
         test_hash_dist(sea_hash, &keys),
         test_hash_dist(sea_hash2, &keys),
     );

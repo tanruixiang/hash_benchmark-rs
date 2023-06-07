@@ -8,11 +8,12 @@ make run
 Result:
 
 ```
-key num is 10000, len of each key:100
-build_cost:(ns)
-default:417554, ahash:214978, murmur:969171, seahash:432687, seahash2:273801
-std_dev
-default:20.845, ahash:25.226, murmur:26.327, seahash:20.184, seahash2:25.717
+key num is 100000, len of each key:100
+----Build_cost(ns)------
+default:3419706, ahash:1491889, murmur:9708750, murmur2:7616865, seahash:5159682, seahash2:3010833
+----Std_dev------
+default:28.798, ahash:29.930, murmur:27.729, murmur2:27.729, seahash:29.800, seahash2:27.518
+
 ```
 
 ## Conclusion
