@@ -88,8 +88,7 @@ where
 
     buckets
         .iter()
-        .fold(0 as f64, |acc, num| acc + ((num * (num + 1)) as f64) / 2.0)
-        as f64
+        .fold(0 as f64, |acc, num| acc + ((num * (num + 1)) as f64) / 2.0) as f64
         / ((keys.len() as f64) / 2.0 / (BUCKET_LEN as f64))
         * ((keys.len() + 2 * BUCKET_LEN - 1) as f64)
 }
@@ -145,8 +144,8 @@ fn main() {
         test_hash_dist(sea_hash, &keys),
         test_hash_dist(sea_hash2, &keys),
     );
-    
-    println!("----chi_test------");
+
+    println!("----Chi-squared-test------");
     println!(
         "default:{:.3}, ahash:{:.3}, murmur:{:.3}, murmur2:{:.3}, seahash:{:.3}, seahash2:{:.3}",
         test_hash_chi(defalut_hash, &keys),
@@ -156,5 +155,4 @@ fn main() {
         test_hash_chi(sea_hash, &keys),
         test_hash_chi(sea_hash2, &keys),
     );
-
 }
