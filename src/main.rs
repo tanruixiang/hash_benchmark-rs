@@ -76,6 +76,23 @@ where
     variance.sqrt()
 }
 
+fn test_hash_chi<F>(hash_function: F, keys: &[String]) -> f64
+where
+    F: Fn(&str) -> u64,
+{
+    let mut buckets = vec![0; BUCKET_LEN];
+    for key in keys {
+        let idx = hash_function(&key) as usize % BUCKET_LEN;
+        buckets[idx] += 1;
+    }
+
+    buckets
+        .iter()
+        .fold(0 as f64, |acc, num| acc + ((num * (num + 1)) as f64) / 2.0) as f64
+        / ((keys.len() as f64) / 2.0 / (BUCKET_LEN as f64))
+        * ((keys.len() + 2 * BUCKET_LEN - 1) as f64)
+}
+
 fn main() {
     let keys: Vec<_> = (0..KEY_NUM)
         .map(|_| generate_random_string(KEY_LEN))
@@ -126,5 +143,16 @@ fn main() {
         test_hash_dist(murmur_hash2, &keys),
         test_hash_dist(sea_hash, &keys),
         test_hash_dist(sea_hash2, &keys),
+    );
+
+    println!("----Chi-squared-test------");
+    println!(
+        "default:{:.3}, ahash:{:.3}, murmur:{:.3}, murmur2:{:.3}, seahash:{:.3}, seahash2:{:.3}",
+        test_hash_chi(defalut_hash, &keys),
+        test_hash_chi(a_hash, &keys),
+        test_hash_chi(murmur_hash, &keys),
+        test_hash_chi(murmur_hash2, &keys),
+        test_hash_chi(sea_hash, &keys),
+        test_hash_chi(sea_hash2, &keys),
     );
 }
